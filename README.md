@@ -10,7 +10,7 @@ Have these things install
 Compile with `cmake .`
 Then `make`
 
-Run the server with `node app.js`
+`cd server` and run the server with `node app.js`
 
 Then start game with `./lazy_foo`
 
