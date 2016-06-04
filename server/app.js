@@ -18,7 +18,7 @@ var io = require('socket.io')(server);
 // });
 
 io.on('connection', function(socket) {
-  console.log('new connection');
+  console.log('DID A LAZY FOO JUST CONNECT?');
   socket.emit('message', 'This is a message from the dark side.');
 });
 
