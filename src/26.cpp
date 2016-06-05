@@ -105,12 +105,6 @@ class LTimer
 		bool mStarted;
 };
 
-//Position of dot
-struct position {
-  int mPosX;
-  int mPosY;
-}
-
 //The dot that will move around on the screen
 class Dot
 {
@@ -135,11 +129,9 @@ class Dot
 		void render();
 
     //Get Positiong of the dot
-    position getPosition();
+    string getPosition();
 
     private:
-
-    position position;
 		//The X and Y offsets of the dot
 		int mPosX, mPosY;
 
@@ -316,13 +308,13 @@ int LTexture::getHeight()
 
 Dot::Dot()
 {
-    //Initialize the offsets
-    mPosX = 0;
-    mPosY = 0;
+  //Initialize the offsets
+  mPosX = 0;
+  mPosY = 0;
 
-    //Initialize the velocity
-    mVelX = 0;
-    mVelY = 0;
+  //Initialize the velocity
+  mVelX = 0;
+  mVelY = 0;
 }
 
 void Dot::handleEvent( SDL_Event& e )
@@ -379,11 +371,13 @@ void Dot::move()
 void Dot::render()
 {
     //Show the dot
-	gDotTexture.render( position.mPosX, position.mPosY );
+	gDotTexture.render( mPosX, mPosY );
 }
 
-position Dot::getPosition() {
-  return position
+string Dot::getPosition() {
+  string x = std::to_string(mPosX);
+  string y = std::to_string(mPosY);
+  return x + " " + y;
 }
 
 bool init()
@@ -551,6 +545,9 @@ int main( int argc, char* args[] )
       current_socket = h.socket();
       bind_events(current_socket);
 
+			std::string d = "hello";
+			current_socket->emit("update move", d);
+
 			//Main loop flag
 			bool quit = false;
 
@@ -579,15 +576,15 @@ int main( int argc, char* args[] )
 				//Move the dot
 				dot.move();
 
-        std::string e = "hello";
-        current_socket->emit("update move", e);
-
 				//Clear screen
 				SDL_SetRenderDrawColor( gRenderer, 0xFF, 0xFF, 0xFF, 0xFF );
 				SDL_RenderClear( gRenderer );
 
 				//Render objects
 				dot.render();
+
+        string p = dot.getPosition();
+				current_socket->emit("update frame", p);
 
 				//Update screen
 				SDL_RenderPresent( gRenderer );

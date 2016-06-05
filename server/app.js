@@ -18,10 +18,10 @@ io.on('connection', function(socket) {
   console.log('DID A LAZY FOO JUST CONNECT?');
   socket.emit('message', { message: 'HELLO FROM SERVER!'});
 
-  socket.on('update move', function(data) {
+  socket.on('update frame', function(data) {
     console.log(data);
   });
-  
+
 });
 
 server.listen(serverPort, function() {
