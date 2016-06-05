@@ -13,6 +13,8 @@ and may not be redistributed without written permission.*/
 #include <mutex>
 #include <condition_variable>
 
+#define EM(__O__) std::cout<<__O__<<std::endl
+
 using namespace sio;
 using namespace std;
 
@@ -24,42 +26,6 @@ bool connect_finish = false;
 //Screen dimension constants
 const int SCREEN_WIDTH = 640;
 const int SCREEN_HEIGHT = 480;
-
-//Socket
-socket::ptr current_socket;
-int participants = -1;
-
-class connection_listener
-{
-    sio::client &handler;
-
-public:
-
-    connection_listener(sio::client& h):
-    handler(h)
-    {
-    }
-
-    void on_connected()
-    {
-        _lock.lock();
-        _cond.notify_all();
-        connect_finish = true;
-        _lock.unlock();
-    }
-
-    void on_close(client::close_reason const& reason)
-    {
-        std::cout<<"sio closed "<<std::endl;
-        exit(0);
-    }
-
-    void on_fail()
-    {
-        std::cout<<"sio failed "<<std::endl;
-        exit(0);
-    }
-};
 
 //Texture wrapper class
 class LTexture
@@ -139,6 +105,12 @@ class LTimer
 		bool mStarted;
 };
 
+//Position of dot
+struct position {
+  int mPosX;
+  int mPosY;
+}
+
 //The dot that will move around on the screen
 class Dot
 {
@@ -162,7 +134,12 @@ class Dot
 		//Shows the dot on the screen
 		void render();
 
+    //Get Positiong of the dot
+    position getPosition();
+
     private:
+
+    position position;
 		//The X and Y offsets of the dot
 		int mPosX, mPosY;
 
@@ -402,7 +379,11 @@ void Dot::move()
 void Dot::render()
 {
     //Show the dot
-	gDotTexture.render( mPosX, mPosY );
+	gDotTexture.render( position.mPosX, position.mPosY );
+}
+
+position Dot::getPosition() {
+  return position
 }
 
 bool init()
@@ -490,6 +471,52 @@ void close()
 	SDL_Quit();
 }
 
+//Socket
+socket::ptr current_socket;
+int participants = -1;
+
+class connection_listener
+{
+    sio::client &handler;
+
+public:
+
+    connection_listener(sio::client& h):
+    handler(h)
+    {
+    }
+
+    void on_connected()
+    {
+        _lock.lock();
+        _cond.notify_all();
+        connect_finish = true;
+        _lock.unlock();
+    }
+
+    void on_close(client::close_reason const& reason)
+    {
+        std::cout<<"sio closed "<<std::endl;
+        exit(0);
+    }
+
+    void on_fail()
+    {
+        std::cout<<"sio failed "<<std::endl;
+        exit(0);
+    }
+};
+
+void bind_events(socket::ptr &socket)
+{
+  current_socket->on("message", sio::socket::event_listener_aux([&](string const& name,message::ptr const& data,bool isAck, message::list &ack_resp)
+    {
+      _lock.lock();
+      EM(data->get_map()["message"]->get_string());
+      _lock.unlock();
+    }));
+}
+
 int main( int argc, char* args[] )
 {
 	//Start up SDL and create window
@@ -499,22 +526,6 @@ int main( int argc, char* args[] )
 	}
 	else
 	{
-		//connect to Socket
-		sio::client h;
-    connection_listener l(h);
-
-    h.set_open_listener(std::bind(&connection_listener::on_connected, &l));
-    h.set_close_listener(std::bind(&connection_listener::on_close, &l,std::placeholders::_1));
-    h.set_fail_listener(std::bind(&connection_listener::on_fail, &l));
-    h.connect("https://127.0.0.1:3000");
-		_lock.lock();
-    if(!connect_finish)
-    {
-        _cond.wait(_lock);
-    }
-    _lock.unlock();
-    current_socket = h.socket();
-
 		//Load media
 		if( !loadMedia() )
 		{
@@ -522,6 +533,24 @@ int main( int argc, char* args[] )
 		}
 		else
 		{
+      //connect to Socket
+      sio::client h;
+      connection_listener l(h);
+
+      h.set_open_listener(std::bind(&connection_listener::on_connected, &l));
+      h.set_close_listener(std::bind(&connection_listener::on_close, &l,std::placeholders::_1));
+      h.set_fail_listener(std::bind(&connection_listener::on_fail, &l));
+      h.connect("https://127.0.0.1:3000");
+
+      _lock.lock();
+      if(!connect_finish)
+      {
+          _cond.wait(_lock);
+      }
+      _lock.unlock();
+      current_socket = h.socket();
+      bind_events(current_socket);
+
 			//Main loop flag
 			bool quit = false;
 
@@ -549,6 +578,9 @@ int main( int argc, char* args[] )
 
 				//Move the dot
 				dot.move();
+
+        std::string e = "hello";
+        current_socket->emit("update move", e);
 
 				//Clear screen
 				SDL_SetRenderDrawColor( gRenderer, 0xFF, 0xFF, 0xFF, 0xFF );
