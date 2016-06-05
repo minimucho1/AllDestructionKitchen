@@ -116,6 +116,8 @@ class Dot
 		//Maximum axis velocity of the dot
 		static const int DOT_VEL = 10;
 
+    bool moved;
+
 		//Initializes the variables
 		Dot();
 
@@ -308,6 +310,8 @@ int LTexture::getHeight()
 
 Dot::Dot()
 {
+  moved = false;
+
   //Initialize the offsets
   mPosX = 0;
   mPosY = 0;
@@ -348,6 +352,7 @@ void Dot::handleEvent( SDL_Event& e )
 void Dot::move()
 {
     //Move the dot left or right
+    int prevX = mPosX;
     mPosX += mVelX;
 
     //If the dot went too far to the left or right
@@ -358,6 +363,7 @@ void Dot::move()
     }
 
     //Move the dot up or down
+    int prevY = mPosY;
     mPosY += mVelY;
 
     //If the dot went too far up or down
@@ -365,6 +371,10 @@ void Dot::move()
     {
         //Move back
         mPosY -= mVelY;
+    }
+
+    if (prevX  != mPosX || prevY != mPosY) {
+      moved = true;
     }
 }
 
@@ -583,8 +593,11 @@ int main( int argc, char* args[] )
 				//Render objects
 				dot.render();
 
-        string p = dot.getPosition();
-				current_socket->emit("update frame", p);
+        if (dot.moved == true) {
+          string p = dot.getPosition();
+          current_socket->emit("update frame", p);
+          dot.moved = false;
+        }
 
 				//Update screen
 				SDL_RenderPresent( gRenderer );
